@@ -27,36 +27,36 @@ class VAE(nn.Module):
         super(VAE, self).__init__()
         self.fc_e = nn.Linear(784, hidden_dim)
         self.fc_mean = nn.Linear(hidden_dim, latent_dim)
-        self.fc_logvar = nn.Linear(hidden_dim, latent_dim)
+        self.fc_log_var = nn.Linear(hidden_dim, latent_dim)
         self.fc_d1 = nn.Linear(latent_dim, hidden_dim)
         self.fc_d2 = nn.Linear(hidden_dim, 784)
 
     def encoder(self, x_in):
         x = F.relu(self.fc_e(x_in.view(-1, 784)))
         mean = self.fc_mean(x)
-        logvar = self.fc_logvar(x)
-        return mean, logvar
+        log_var = self.fc_log_var(x)
+        return mean, log_var
 
     def decoder(self, z):
         z = F.relu(self.fc_d1(z))
         x_out = F.sigmoid(self.fc_d2(z))
         return x_out.view(-1, 1, 28, 28)
 
-    def sample_normal(self, mean, logvar):
+    def sample_normal(self, mean, log_var):
         # Using torch.normal(means,sds) returns a stochastic tensor which we cannot backpropogate through.
         # Instead we utilize the 'reparameterization trick'.
         # http://stats.stackexchange.com/a/205336
         # http://dpkingma.com/wordpress/wp-content/uploads/2015/12/talk_nips_workshop_2015.pdf
-        sd = torch.exp(logvar * 0.5)
+        sd = torch.exp(log_var * 0.5)
         e = Variable(torch.randn(sd.size()))  # Sample from standard normal
         z = e.mul(sd).add_(mean)
         return z
 
     def forward(self, x_in):
-        z_mean, z_logvar = self.encoder(x_in)
-        z = self.sample_normal(z_mean, z_logvar)
+        z_mean, z_log_var = self.encoder(x_in)
+        z = self.sample_normal(z_mean, z_log_var)
         x_out = self.decoder(z)
-        return x_out, z_mean, z_logvar
+        return x_out, z_mean, z_log_var
 
 
 model = VAE()
@@ -66,9 +66,9 @@ model = VAE()
 
 
 # Loss function
-def criterion(x_out, x_in, z_mu, z_logvar):
+def criterion(x_out, x_in, z_mu, z_log_var):
     bce_loss = F.binary_cross_entropy(x_out, x_in, size_average=False)
-    kld_loss = -0.5 * torch.sum(1 + z_logvar - (z_mu ** 2) - torch.exp(z_logvar))
+    kld_loss = -0.5 * torch.sum(1 + z_log_var - (z_mu ** 2) - torch.exp(z_log_var))
     loss = (bce_loss + kld_loss) / x_out.size(0)  # normalize by batch size
     return loss
 
@@ -77,10 +77,10 @@ def criterion(x_out, x_in, z_mu, z_logvar):
 optimizer = torch.optim.Adam(model.parameters())
 
 # Data loaders
-trainloader = DataLoader(MNIST(root='./data', train=True, download=True, transform=transforms.ToTensor()),
+train_loader = DataLoader(MNIST(root='./data', train=True, download=True, transform=transforms.ToTensor()),
+                          batch_size=128, shuffle=True)
+test_loader = DataLoader(MNIST(root='./data', train=False, download=True, transform=transforms.ToTensor()),
                          batch_size=128, shuffle=True)
-testloader = DataLoader(MNIST(root='./data', train=False, download=True, transform=transforms.ToTensor()),
-                        batch_size=128, shuffle=True)
 
 
 # ====================================================================================================
@@ -92,15 +92,15 @@ def train(model, optimizer, dataloader, epochs=15):
         for images, _ in dataloader:
             x_in = Variable(images)
             optimizer.zero_grad()
-            x_out, z_mu, z_logvar = model(x_in)
-            loss = criterion(x_out, x_in, z_mu, z_logvar)
+            x_out, z_mu, z_log_var = model(x_in)
+            loss = criterion(x_out, x_in, z_mu, z_log_var)
             loss.backward()
             optimizer.step()
             losses.append(loss.data[0])
     return losses
 
 
-train_losses = train(model, optimizer, trainloader)
+train_losses = train(model, optimizer, train_loader)
 plt.figure(figsize=(10, 5))
 plt.plot(train_losses)
 plt.show()
@@ -129,13 +129,13 @@ def test(model, dataloader):
     running_loss = 0.0
     for images, _ in dataloader:
         x_in = Variable(images)
-        x_out, z_mu, z_logvar = model(x_in)
-        loss = criterion(x_out, x_in, z_mu, z_logvar)
+        x_out, z_mu, z_log_var = model(x_in)
+        loss = criterion(x_out, x_in, z_mu, z_log_var)
         running_loss = running_loss + (loss.data[0] * x_in.size(0))
     return running_loss / len(dataloader.dataset)
 
 
-test_loss = test(model, testloader)
+test_loss = test(model, test_loader)
 print(test_loss)
 
 
@@ -158,7 +158,7 @@ def visualize_mnist_vae(model, dataloader, num=16):
     imshow(make_image_grid(x_out))
 
 
-visualize_mnist_vae(model, testloader)
+visualize_mnist_vae(model, test_loader)
 
 # ====================================================================================================
 
@@ -166,12 +166,12 @@ visualize_mnist_vae(model, testloader)
 model2 = VAE(latent_dim=2)
 optimizer2 = torch.optim.Adam(model2.parameters())
 
-train2_losses = train(model2, optimizer2, trainloader)
-test2_loss = test(model2, testloader)
+train2_losses = train(model2, optimizer2, train_loader)
+test2_loss = test(model2, test_loader)
 
 print(test2_loss)
 visualize_losses_moving_average(train2_losses, ylim=(135, 175))
-visualize_mnist_vae(model2, testloader)
+visualize_mnist_vae(model2, test_loader)
 
 
 # ====================================================================================================
@@ -192,7 +192,7 @@ def visualize_encoder(model, dataloader):
     plt.show()
 
 
-visualize_encoder(model2, testloader)
+visualize_encoder(model2, test_loader)
 
 
 # ====================================================================================================

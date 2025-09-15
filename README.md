@@ -8,7 +8,8 @@ conda create -n vaes python=3.6 -y
 conda activate vaes
 
 # Install dependencies
-pip install http://download.pytorch.org/whl/torch-0.1.10.post1-cp36-cp36m-macosx_10_7_x86_64.whl
+pip install https://download.pytorch.org/whl/cu75/torch-0.1.10.post1-cp36-cp36m-linux_x86_64.whl#sha256=314aaf2d8320357f1c21d5729c6600b6b8d30210bfeb1aabe0fd9199a0b94b7c
+# pip install http://download.pytorch.org/whl/torch-0.1.10.post1-cp36-cp36m-macosx_10_7_x86_64.whl
 pip install -r requirements.txt
 ```
 
