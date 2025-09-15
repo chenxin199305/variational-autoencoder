@@ -15,7 +15,7 @@ from torchvision.datasets import MNIST
 from torchvision.utils import make_grid as make_image_grid
 from tqdm import tnrange
 
-torch.manual_seed(2017)  # reproducability
+torch.manual_seed(2017)  # reproduce-ability
 sns.set_style('dark')
 
 
