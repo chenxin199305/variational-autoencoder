@@ -18,6 +18,26 @@ from tqdm import tnrange
 torch.manual_seed(2017)  # reproduce-ability
 sns.set_style('dark')
 
+# ====================================================================================================
+
+
+flag_train_vaes_1 = False  # set to True to train vaes with different latent space sizes
+flag_test_vaes_1 = False  # set to True to test vaes with different latent space sizes
+
+flag_train_vaes_2 = False  # set to True to train vaes with different latent space sizes
+flag_test_vaes_2 = False  # set to True to test vaes with different latent space sizes
+flag_encoder = False
+flag_decoder = False
+
+print(
+    f"flag_train_vaes_1 = {flag_train_vaes_1}\n"
+    f"flag_test_vaes_1 = {flag_test_vaes_1}\n"
+    f"flag_train_vaes_2 = {flag_train_vaes_2}\n"
+    f"flag_test_vaes_2 = {flag_test_vaes_2}\n"
+    f"flag_encoder = {flag_encoder}\n"
+    f"flag_decoder = {flag_decoder}\n"
+)
+
 
 # ====================================================================================================
 
@@ -100,10 +120,11 @@ def train(model, optimizer, dataloader, epochs=15):
     return losses
 
 
-train_losses = train(model, optimizer, train_loader)
-plt.figure(figsize=(10, 5))
-plt.plot(train_losses)
-plt.show()
+if flag_train_vaes_1:
+    train_losses = train(model, optimizer, train_loader)
+    plt.figure(figsize=(10, 5))
+    plt.plot(train_losses)
+    plt.show()
 
 
 # ====================================================================================================
@@ -119,7 +140,8 @@ def visualize_losses_moving_average(losses, window=50, boundary='valid', ylim=(9
     plt.show()
 
 
-visualize_losses_moving_average(train_losses)
+if flag_train_vaes_1:
+    visualize_losses_moving_average(train_losses)
 
 
 # ====================================================================================================
@@ -135,8 +157,9 @@ def test(model, dataloader):
     return running_loss / len(dataloader.dataset)
 
 
-test_loss = test(model, test_loader)
-print(test_loss)
+if flag_test_vaes_1:
+    test_loss = test(model, test_loader)
+    print(test_loss)
 
 
 # ====================================================================================================
@@ -158,20 +181,24 @@ def visualize_mnist_vae(model, dataloader, num=16):
     imshow(make_image_grid(x_out))
 
 
-visualize_mnist_vae(model, test_loader)
+if flag_test_vaes_1:
+    visualize_mnist_vae(model, test_loader)
 
 # ====================================================================================================
 
 # Train, test and visualize reconstruction using a 2D latent space
-model2 = VAE(latent_dim=2)
-optimizer2 = torch.optim.Adam(model2.parameters())
+if flag_train_vaes_2:
+    model2 = VAE(latent_dim=2)
+    optimizer2 = torch.optim.Adam(model2.parameters())
 
-train2_losses = train(model2, optimizer2, train_loader)
-test2_loss = test(model2, test_loader)
+    train2_losses = train(model2, optimizer2, train_loader)
+    visualize_losses_moving_average(train2_losses, ylim=(135, 175))
 
-print(test2_loss)
-visualize_losses_moving_average(train2_losses, ylim=(135, 175))
-visualize_mnist_vae(model2, test_loader)
+if flag_test_vaes_2:
+    test2_loss = test(model2, test_loader)
+
+    print(test2_loss)
+    visualize_mnist_vae(model2, test_loader)
 
 
 # ====================================================================================================
@@ -192,7 +219,8 @@ def visualize_encoder(model, dataloader):
     plt.show()
 
 
-visualize_encoder(model2, test_loader)
+if flag_encoder:
+    visualize_encoder(model2, test_loader)
 
 
 # ====================================================================================================
@@ -221,4 +249,5 @@ def visualize_decoder(model, num=20, range_type='g'):
     plt.show()
 
 
-visualize_decoder(model2)
+if flag_decoder:
+    visualize_decoder(model2)
